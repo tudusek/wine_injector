@@ -15,12 +15,14 @@ int main(int argc, char* argv[]) {
     si.cb = sizeof(si);
     CreateProcessA(nullptr, argv[1], nullptr, nullptr, FALSE, 0, nullptr, nullptr, &si, &pi);
 
-    Sleep(2500);
+    printf("Press ENTER to inject.");
+    getchar();
 
     LPVOID alloc = VirtualAllocEx(pi.hProcess, nullptr, dll.size(), MEM_RESERVE | MEM_COMMIT, PAGE_EXECUTE_READWRITE);
     WriteProcessMemory(pi.hProcess, alloc, dll.data(), dll.size(), nullptr);
     CreateRemoteThread(pi.hProcess, nullptr, 0, (LPTHREAD_START_ROUTINE) LoadLibrary, alloc, 0, nullptr);
 
+    WaitForSingleObject(pi.hProcess, INFINITE);
     CloseHandle(pi.hProcess);
     CloseHandle(pi.hThread);
 }
