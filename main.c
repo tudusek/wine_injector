@@ -17,10 +17,11 @@ int main(int argc, char* argv[]) {
 
     LPVOID alloc = VirtualAllocEx(pi.hProcess, NULL, strlen(argv[2]), MEM_RESERVE | MEM_COMMIT, PAGE_EXECUTE_READWRITE);
     WriteProcessMemory(pi.hProcess, alloc, argv[2], strlen(argv[2]), NULL);
-    CreateRemoteThread(pi.hProcess, NULL, 0, (LPTHREAD_START_ROUTINE)LoadLibrary, alloc, 0, NULL);
+    HANDLE handle = CreateRemoteThread(pi.hProcess, NULL, 0, (LPTHREAD_START_ROUTINE)LoadLibrary, alloc, 0, NULL);
+    WaitForSingleObject(handle, 5000);
+    VirtualFreeEx(pi.hProcess, alloc, 0, MEM_RELEASE);
 
     WaitForSingleObject(pi.hProcess, INFINITE);
-    VirtualFreeEx(pi.hProcess, alloc, 0, MEM_RELEASE);
     CloseHandle(pi.hProcess);
     CloseHandle(pi.hThread);
 }
