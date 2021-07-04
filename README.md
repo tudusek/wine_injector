@@ -27,7 +27,7 @@
     ```
 5. generate cmake project
     ```
-    cmake ..
+    cmake -DCMAKE_BUILD_TYPE=Release ..
     ```
 6. build cmake project
     ```

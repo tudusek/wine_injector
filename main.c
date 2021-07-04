@@ -5,11 +5,8 @@ int main(int argc, char* argv[]) {
     if (argc < 3)
         return printf("Usage: wine_injector.exe <executable> <dll>\n");
 
-    STARTUPINFO si;
-    PROCESS_INFORMATION pi;
-    ZeroMemory(&si, sizeof(si));
-    ZeroMemory(&pi, sizeof(pi));
-    si.cb = sizeof(si);
+    STARTUPINFO si = {.cb = sizeof si};
+    PROCESS_INFORMATION pi = {0};
     CreateProcessA(NULL, argv[1], NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi);
 
     printf("Press ENTER to inject.");
