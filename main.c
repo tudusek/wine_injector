@@ -3,7 +3,7 @@
 
 int main(int argc, char* argv[]) {
     if (argc < 3)
-        return printf("Usage: wine_injector.exe <executable> <dll>\n");
+        return (printf("Usage: wine_injector.exe <executable> <dll>\n") & 0) | 1;
 
     STARTUPINFO si = {.cb = sizeof si};
     PROCESS_INFORMATION pi = {0};
