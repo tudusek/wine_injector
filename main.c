@@ -1,60 +1,62 @@
-#include <stdint.h>
 #include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 #include <windows.h>
 
-static char *concat_args(char *exe_name, char *args[], size_t args_len) {
-    // Also have to prepend executable name or Windows will pass wrong argv[0].
-    // The MSDN documentation mentions this, but in a really unclear way.
-    const size_t exe_len = strlen(exe_name);
-    char *out = malloc(exe_len + 1);
-    memcpy(out, exe_name, exe_len);
-    size_t offset = exe_len + 1;
-    out[offset - 1] = ' ';
-
-    // Concatenate the actual arguments
-    for (size_t i = 0; i < args_len; i++) {
-        char *arg = args[i];
-        const size_t arg_len = strlen(arg);
-
-        out = realloc(out, offset + arg_len + 1);  // + 1 for space
-        memcpy(out + offset, arg, arg_len);
-        offset += arg_len + 1;  // + 1 for space
-        out[offset - 1] = ' ';
-    }
-    // Replace final space w/ terminator
-    out[offset - 1] = '\0';
-    return out;
-}
-
 int main(int argc, char *argv[]) {
-    if (argc < 3)
-        return (printf("Usage: wine_injector.exe <executable> <dll> <args for "
-                       "executable (optional)>\n") &
-                0) |
-               1;
-
-    STARTUPINFO si = {.cb = sizeof si};
-    PROCESS_INFORMATION pi = {0};
-    char *cmdline = NULL;
-    if (argc > 3) {
-        cmdline = concat_args(argv[1], argv + 3, argc - 3);
-        printf("cmdline: '%s'\n", cmdline);
-    }
-    if (CreateProcessA(argv[1], cmdline, NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi) == 0) {
-        fprintf(stderr, "wine_injector: CreateProcessA failed!\n");
+    if (argc < 3) {
+        printf("Usage: wine_injector.exe (executable) (dll) (optional arguments to executable)\n");
         return EXIT_FAILURE;
     }
 
-    free(cmdline);
+    STARTUPINFOA si = {.cb = sizeof si};
+    PROCESS_INFORMATION pi = {0};
 
-    printf("Press ENTER to inject.");
-    getchar();
+    char *args = NULL;
+    if (argc > 3) {
+        size_t size_of_args = 0;
+
+        for (int i = 3; i < argc; i++)
+            size_of_args += strlen(argv[i]) + 1; // argv + space/null
+
+        if (!(args = (char *)malloc(size_of_args))) {
+            printf("Failed to allocate args.");
+            return EXIT_FAILURE;
+        }
+        ZeroMemory(args, size_of_args);
+
+        for (int i = 3; i < argc; i++) {
+            memcpy(args + strlen(args), argv[i], strlen(argv[i]));        // append argv
+            memcpy(args + strlen(args), i == (argc - 1) ? "\0" : " ", 1); // if its the last arg copy null, otherwise copy space
+        }
+    }
+
+    if (CreateProcessA(argv[1], args, NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi) == 0) {
+        printf("CreateProcessA failed.\n");
+        return EXIT_FAILURE;
+    }
+
+    if (args)
+        free(args);
+
+    printf("Press ENTER to inject.\n");
+    (void)getchar();
 
     LPVOID alloc = VirtualAllocEx(pi.hProcess, NULL, strlen(argv[2]), MEM_RESERVE | MEM_COMMIT, PAGE_EXECUTE_READWRITE);
-    WriteProcessMemory(pi.hProcess, alloc, argv[2], strlen(argv[2]), NULL);
-    HANDLE handle = CreateRemoteThread(pi.hProcess, NULL, 0, (LPTHREAD_START_ROUTINE)LoadLibrary, alloc, 0, NULL);
+    if (!alloc) {
+        printf("VirtualAllocEx failed.\n");
+        return EXIT_FAILURE;
+    }
+
+    if (WriteProcessMemory(pi.hProcess, alloc, argv[2], strlen(argv[2]), NULL) == 0) {
+        printf("WriteProcessMemory failed.\n");
+        return EXIT_FAILURE;
+    }
+
+    HANDLE handle = CreateRemoteThread(pi.hProcess, NULL, 0, (LPTHREAD_START_ROUTINE)LoadLibraryA, alloc, 0, NULL);
+    if (!handle) {
+        printf("CreateRemoteThread failed.\n");
+        return EXIT_FAILURE;
+    }
+
     WaitForSingleObject(handle, 5000);
     VirtualFreeEx(pi.hProcess, alloc, 0, MEM_RELEASE);
 
