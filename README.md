@@ -4,7 +4,7 @@
 1. build the project first (see building)
 2. run it:
     ```
-    WINEDEBUG=-all wine wine_injector.exe <exe> <dll>
+    WINEDEBUG=-all wine wine_injector.exe <exe> <dll> <args for executable (optional)>
     ```
 3. wait for the process to fully load and then press enter in the terminal
 
