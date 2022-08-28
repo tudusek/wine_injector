@@ -3,33 +3,36 @@
 
 int main(int argc, char *argv[]) {
     if (argc < 3) {
-        printf("Usage: wine_injector.exe (executable) (dll) (optional arguments to executable)\n");
+        printf("Usage: wine_injector.exe (dll) (executable) (optional args to exe)\n");
         return EXIT_FAILURE;
     }
 
     STARTUPINFOA si = {.cb = sizeof si};
     PROCESS_INFORMATION pi = {0};
 
-    char *args = NULL;
-    if (argc > 3) {
-        size_t size_of_args = 0;
+    size_t size_of_args = 0;
 
-        for (int i = 3; i < argc; i++)
-            size_of_args += strlen(argv[i]) + 1; // argv + space/null
+    for (int i = 2; i < argc; i++)
+        size_of_args += strlen(argv[i]) + 1; // argv + space/null
 
-        if (!(args = (char *)malloc(size_of_args))) {
-            printf("Failed to allocate args.");
-            return EXIT_FAILURE;
-        }
-        ZeroMemory(args, size_of_args);
+    char *args = (char *)malloc(size_of_args);
+    if (!args) {
+        printf("Failed to allocate args.");
+        return EXIT_FAILURE;
+    }
+    ZeroMemory(args, size_of_args);
 
-        for (int i = 3; i < argc; i++) {
-            memcpy(args + strlen(args), argv[i], strlen(argv[i]));        // append argv
-            memcpy(args + strlen(args), i == (argc - 1) ? "\0" : " ", 1); // if its the last arg copy null, otherwise copy space
-        }
+    for (int i = 2; i < argc; i++) {
+        memcpy(args + strlen(args), argv[i], strlen(argv[i]));        // append argv
+        memcpy(args + strlen(args), i == (argc - 1) ? "\0" : " ", 1); // if its the last arg put null, otherwise space
     }
 
-    if (CreateProcessA(argv[1], args, NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi) == 0) {
+    // for debugging purposes
+    // printf("dll: %s\n", argv[1]);
+    // printf("exe: %s\n", argv[2]);
+    // printf("args: %s\n", args);
+
+    if (CreateProcessA(argv[2], args, NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi) == 0) {
         printf("CreateProcessA failed.\n");
         return EXIT_FAILURE;
     }
@@ -40,13 +43,13 @@ int main(int argc, char *argv[]) {
     printf("Press ENTER to inject.\n");
     (void)getchar();
 
-    LPVOID alloc = VirtualAllocEx(pi.hProcess, NULL, strlen(argv[2]), MEM_RESERVE | MEM_COMMIT, PAGE_EXECUTE_READWRITE);
+    LPVOID alloc = VirtualAllocEx(pi.hProcess, NULL, strlen(argv[1]), MEM_RESERVE | MEM_COMMIT, PAGE_EXECUTE_READWRITE);
     if (!alloc) {
         printf("VirtualAllocEx failed.\n");
         return EXIT_FAILURE;
     }
 
-    if (WriteProcessMemory(pi.hProcess, alloc, argv[2], strlen(argv[2]), NULL) == 0) {
+    if (WriteProcessMemory(pi.hProcess, alloc, argv[1], strlen(argv[1]), NULL) == 0) {
         printf("WriteProcessMemory failed.\n");
         return EXIT_FAILURE;
     }
