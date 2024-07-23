@@ -1,3 +1,4 @@
+.clangd
 .vs
 .idea
 cmake-build-*

@@ -1,12 +1,12 @@
 # wine_injector
+Special thanks to crwn1337 and casept for the original code
 
 ## usage
-1. build the project first (see building)
-2. run it:
-    ```
-    WINEDEBUG=-all wine wine_injector.exe <dll> <exe> <optional args for exe>
-    ```
-3. wait for the process to fully load and then press enter in the terminal
+ ```
+WINEDEBUG=-all wine wine_injector.exe [--edll dll.dll] [--ldll dll.dll] <exe> <optional args for exe>
+```
+You can load dll at start of the process using --edll (early load) or --ldll (late load) to load dll(s) after keypress.
+You can use as much --edll/--ldll as you need
 
 ## building
 1. clone the repo
